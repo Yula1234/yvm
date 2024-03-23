@@ -9,6 +9,9 @@
 
 typedef enum {
 	INSTR_PUSH,
+	INSTR_POP,
+	INSTR_SYSCALL,
+	INSTR_MOV_V0,
 } InstrType;
 
 typedef struct Instr {
@@ -65,6 +68,7 @@ typedef enum Err {
 	ERR_STACK_UNDERFLOW,
 	ERR_STACK_OVERFLOW,
 	ERR_ILLEGAL_INST,
+	ERR_ILLEGAL_SYSCALL_NO,
 } Err;
 
 const char* err_as_cstr(Err e) {
@@ -77,10 +81,34 @@ const char* err_as_cstr(Err e) {
 		return "stack overflow";
 	case ERR_ILLEGAL_INST:
 		return "illegal instruction";
+	case ERR_ILLEGAL_SYSCALL_NO:
+		return "illegal syscall";
 	default:
 		fputs("error unreacheable at err_as_cstr(...)\n", stderr);
 		exit(1);
 	}
+}
+
+#define REG_V0 0
+#define REG_V1 1
+
+int* __find_reg(YulaVM* yvm, int reg) {
+	if(reg == REG_V0) {
+		return &(yvm->v0);
+	}
+	if(reg == REG_V1) {
+		return &(yvm->v1);
+	}
+	return &(yvm->v0);
+}
+
+Err __invoke_syscall(YulaVM* yvm) {
+	int __syscall_no = yvm->v0;
+	if(__syscall_no == 0) {
+		dump_yvm_state(yvm, stdout);
+		return ERR_OK;
+	}
+	return ERR_ILLEGAL_SYSCALL_NO;
 }
 
 Err yvm_exec_instr(YulaVM* yvm) {
@@ -95,8 +123,28 @@ Err yvm_exec_instr(YulaVM* yvm) {
 			yvm->stack_head += 4;
 			break;
 		}
+		case INSTR_POP:
+		{
+			if(yvm->stack_base <= yvm->stack_head) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			int* reg = __find_reg(yvm, cur_inst.operand);
+			*reg = yvm->memory[yvm->stack_head];
+			yvm->stack_head -= 4;
+			break;
+		}
+		case INSTR_MOV_V0:
+		{	
+			yvm->v0 = cur_inst.operand;
+			break;
+		}
+		case INSTR_SYSCALL:
+		{
+			return __invoke_syscall(yvm);
+			break;
+		}
 		default:
-			fprintf(stderr, "illegal instruction\n");
+			fprintf(stderr, "illegal instruction %d\n", cur_inst.type);
 			dump_yvm_state(yvm, stderr);
 			err_destroy_yvm(yvm);
 			break;
@@ -119,7 +167,7 @@ void dump_instr(Instr in) {
 }
 
 void yvm_exec_prog(YulaVM* yvm) {
-	for(int i = 0;i < yvm->code_size;++i) {
+	for(;yvm->ip < yvm->code_size;yvm->ip++) {
 		Err e = yvm_exec_instr(yvm);
 		if(e != ERR_OK) {
 			fprintf(stderr, "SIGNAL: %s\n", err_as_cstr(e));
@@ -130,8 +178,15 @@ void yvm_exec_prog(YulaVM* yvm) {
 
 void yvm_load_bytecode(YulaVM* yvm, Instr* buffer, size_t size) {
 	size_t i = 0;
+	Instr* buf = buffer;
+	char* cbuf = (char*)buf;
+	if(cbuf[0] != 'Y' && cbuf[1] != 'M') {
+		fputs("ERROR: not yvm bytecode provided\n", stderr);
+	}
 	for(;i < size;++i) {
-		yvm->code[i] = buffer[i];
+		if(i != 0) {
+			yvm->code[i] = buf[i];
+		}
 	}
 	yvm->code_size = (int)i;
 }

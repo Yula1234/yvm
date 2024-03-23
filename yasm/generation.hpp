@@ -7,10 +7,18 @@
 
 #include "parser.hpp"
 
+void consume_un(...) {
 
+}
+
+#define REG_V0 0
+#define REG_V1 1
 
 typedef enum {
 	INSTR_PUSH,
+	INSTR_POP,
+	INSTR_SYSCALL,
+	INSTR_MOV_V0,
 } InstrType;
 
 typedef struct Instr {
@@ -29,7 +37,12 @@ typedef struct Yvm_Out_file {
 
 	void write(std::string path) {
 		FILE* file = fopen(path.c_str(), "wb");
+
+		fwrite("YM", sizeof(char), 2, file);
+		fwrite("\0\0\0\0\0\0", sizeof(char), 6, file);
+		
 		fwrite(reinterpret_cast<char*>(m_code), sizeof(Instr), m_count, file);
+		
 		fclose(file);
 	}
 } Yvm_Out_file;
@@ -68,6 +81,33 @@ public:
 			{
 				gen.m_output << gen.gen_expr(stmt_push->expr);
 			}
+
+			void operator()(const NodeStmtPop* stmt_pop) const
+			{
+				std::cout << "pop\n";
+				consume_un(stmt_pop);
+			}
+
+			void operator()(const NodeStmtMov* stmt_mov) const
+			{
+				NodeExpr* to = stmt_mov->to;
+				NodeExpr* expr = stmt_mov->expr;
+				if(!std::holds_alternative<NodeExprReg*>(to->var)) {
+					gen.GeneratorError(stmt_mov->def, "except register at left");
+				}
+				if(!std::holds_alternative<NodeExprIntLit*>(expr->var)) {
+					gen.GeneratorError(stmt_mov->def, "except int literal at right");
+				}
+				NodeExprIntLit* lit = std::get<NodeExprIntLit*>(expr->var);
+				Instr in = { .type = INSTR_MOV_V0 , .operand = std::stoi(lit->int_lit.value.value()) };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtSyscall* stmt_syscall) const
+			{
+				std::cout << "syscall\n";
+				consume_un(stmt_syscall);
+			}
 		};
 
 		StmtVisitor visitor { .gen = *this };
@@ -83,7 +123,6 @@ public:
 	}
 
 private:
-
 	const NodeProg m_prog;
 	Yvm_Out_file m_output;
 };

@@ -7,7 +7,12 @@
 enum class TokenType {
     push,
     int_lit,
-    ident
+    ident,
+    mov,
+    syscall,
+    pop,
+    reg,
+    comma,
 };
 
 std::string tok_to_string(const TokenType type)
@@ -19,6 +24,16 @@ std::string tok_to_string(const TokenType type)
         return "`int literal`";
     case TokenType::ident:
         return "`ident`";
+    case TokenType::mov:
+        return "`mov`";
+    case TokenType::syscall:
+        return "`syscall`";
+    case TokenType::pop:
+        return "`pop`";
+    case TokenType::reg:
+        return "`register`";
+    case TokenType::comma:
+        return "`,`";
     }
     assert(false);
 }
@@ -74,14 +89,30 @@ public:
         std::vector<Token> tokens;
         std::string buf;
         int line_count = 1;
-        while (peek().has_value()) {
-            if (std::isalpha(peek().value()) || is_valid_id(peek().value())) {
+        while(peek().has_value()) {
+            if(std::isalpha(peek().value()) || is_valid_id(peek().value())) {
                 buf.push_back(consume());
-                while (peek().has_value() && (std::isalnum(peek().value()) || is_valid_id(peek().value()))) {
+                while(peek().has_value() && (std::isalnum(peek().value()) || is_valid_id(peek().value()))) {
                     buf.push_back(consume());
                 }
-                if (buf == "push") {
+                if(buf == "push") {
                     tokens.push_back({ .type = TokenType::push, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "pop") {
+                    tokens.push_back({ .type = TokenType::pop, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "syscall") {
+                    tokens.push_back({ .type = TokenType::syscall, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "mov") {
+                    tokens.push_back({ .type = TokenType::mov, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "v0") {
+                    tokens.push_back({ .type = TokenType::reg, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .value = buf, .file = file });
                     buf.clear();
                 }
                 else {
@@ -103,6 +134,10 @@ public:
                 while (peek().has_value() && peek().value() != '\n') {
                     consume();
                 }
+            }
+            else if (peek().value() == ',') {
+                consume();
+                tokens.push_back({ .type = TokenType::comma, .line = line_count, .col = m_col - 1, .file = file });
             }
             else if(peek().value() == '\'') {
                 consume();

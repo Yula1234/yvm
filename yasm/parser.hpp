@@ -13,8 +13,13 @@ struct NodeExprIntLit {
 	Token int_lit;
 };
 
+struct NodeExprReg {
+	Token def;
+	std::string name;
+};
+
 struct NodeExpr {
-	std::variant<NodeExprIntLit*> var;
+	std::variant<NodeExprIntLit*, NodeExprReg*> var;
 };
 
 struct NodeStmtPush {
@@ -22,8 +27,24 @@ struct NodeStmtPush {
 	NodeExpr* expr;
 };
 
+struct NodeStmtMov {
+	Token def;
+	NodeExpr* to;
+	NodeExpr* expr;
+};
+
+struct NodeStmtPop {
+	Token def;
+	std::string reg;
+};
+
+struct NodeStmtSyscall {
+	Token def;
+};
+
 struct NodeStmt {
-	std::variant<NodeStmtPush*> var;
+	std::variant<NodeStmtPush*, NodeStmtMov*,
+				NodeStmtPop*, NodeStmtSyscall*> var;
 };
 
 struct NodeProg {
@@ -67,12 +88,19 @@ public:
 
 	std::optional<NodeExpr*> parse_expr() // NOLINT(*-no-recursion)
 	{
-		if (auto int_lit = try_consume(TokenType::int_lit)) {
+		if(auto int_lit = try_consume(TokenType::int_lit)) {
 			auto expr_int = m_allocator.emplace<NodeExprIntLit>(int_lit.value());
 			auto expr = m_allocator.emplace<NodeExpr>(expr_int);
 			return expr;
 		}
-		if (auto ident = try_consume(TokenType::ident)) {
+		if(auto _reg = try_consume(TokenType::reg)) {
+			auto expr_reg = m_allocator.emplace<NodeExprReg>();
+			expr_reg->def = _reg.value();
+			expr_reg->name = _reg.value().value.value();
+			auto expr = m_allocator.emplace<NodeExpr>(expr_reg);
+			return expr;
+		}
+		if(auto ident = try_consume(TokenType::ident)) {
 			assert(false && "unkown identifer");
 		}
 		return {};
@@ -91,6 +119,38 @@ public:
 			auto stmt = m_allocator.emplace<NodeStmt>(push_stmt);
 			return stmt;
 		}
+
+		if(auto _push = try_consume(TokenType::pop)) {
+			auto push_stmt = m_allocator.emplace<NodeStmtPush>();
+			push_stmt->def = _push.value();
+			if(auto expr = parse_expr()) {
+				push_stmt->expr = expr.value();
+			} else {
+				error_expected("expression");
+			}
+			auto stmt = m_allocator.emplace<NodeStmt>(push_stmt);
+			return stmt;
+		}
+
+		if(auto _mov = try_consume(TokenType::mov)) {
+			auto mov_stmt = m_allocator.emplace<NodeStmtMov>();
+			mov_stmt->def = _mov.value();
+			if(auto expr = parse_expr()) {
+				mov_stmt->to = expr.value();
+			} else {
+				error_expected("expression");
+			}
+			try_consume_err(TokenType::comma);
+			if(auto expr = parse_expr()) {
+				mov_stmt->expr = expr.value();
+			} else {
+				error_expected("expression");
+			}
+			auto stmt = m_allocator.emplace<NodeStmt>(mov_stmt);
+			return stmt;
+		}
+
+		// TODO: parse syscall
 
 		return {};
 	}
