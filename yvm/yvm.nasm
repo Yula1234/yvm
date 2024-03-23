@@ -4,6 +4,8 @@ section .text
 global init_yvm
 global yvm_push
 global yvm_pop
+global yvm_mov_v0
+global yvm_mov_v1
 ; --------------- ;
 
 extern write
@@ -14,6 +16,12 @@ extern fputs
 extern printf
 
 %define YVM_MEM_CAPACITY 64000
+%define YVM_MEM_OFFSET 0
+%define YVM_STACK_BASE 4
+%define YVM_STACK_HEAD 8
+%define YVM_V0 12
+%define YVM_V1 16
+%define YVM_IP 20
 
 yputs:
 	push dword [esp+4]
@@ -32,9 +40,12 @@ init_yvm: ;[ebp+8](YulaVM* YVM) -> void
 	call allocator_alloc
 	add esp, 4
 	mov ebx, dword [ebp-4]
-	mov dword [ebx], eax
-	mov dword [ebx+4], 0 ; stack_base
-	mov dword [ebx+8], 0 ; stack_head
+	mov dword [ebx+YVM_MEM_OFFSET], eax
+	mov dword [ebx+YVM_STACK_BASE], 0 ; stack_base
+	mov dword [ebx+YVM_STACK_HEAD], 0 ; stack_head
+	mov dword [ebx+YVM_V0], 0 ; v0
+	mov dword [ebx+YVM_V1], 0 ; v1
+	mov dword [ebx+YVM_IP], 0 ; v1
 	add esp, 4
 	pop ebp
 	ret
@@ -72,6 +83,26 @@ yvm_pop: ;[ebp+8](YulaVM* YVM) -> int
 	mov eax, dword [edx+ebx]
 	mov dword [ecx+8], ebx
 	add esp, 4
+	pop ebp
+	ret
+
+yvm_mov_v0:
+	push ebp
+	mov ebp, esp
+	mov edx, dword [ebp+8]
+	mov ecx, dword [ebp+12]
+	mov dword [edx+YVM_V0], ecx
+	xor eax, eax
+	pop ebp
+	ret
+
+yvm_mov_v1:
+	push ebp
+	mov ebp, esp
+	mov edx, dword [ebp+8]
+	mov ecx, dword [ebp+12]
+	mov dword [edx+YVM_V1], ecx
+	xor eax, eax
 	pop ebp
 	ret
 
