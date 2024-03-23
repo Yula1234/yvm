@@ -17,7 +17,7 @@ int main(int argc, const char* argv[]) {
 	}
 	Arena arena = create_arena(KiB(32));
 	YulaVM* _Yvm = (YulaVM*)arena_alloc(&arena, sizeof(YulaVM));
-	init_yvm(_Yvm, 512);
+	init_yvm(_Yvm, YVM_MEM_CAPACITY);
 	FILE_SIZE = get_file_size_wp(argv[1]);
 	if(FILE_SIZE < 5) {
 		fputs("ERROR: not yvm bytecode provided\n", stderr);

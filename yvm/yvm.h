@@ -52,4 +52,46 @@ void init_yvm(YulaVM* yvm, int memory_size, Arena* arena) {
 	yvm->v1 = 0;
 }
 
+void err_destroy_yvm(YulaVM* yvm) {
+	free(yvm->memory);
+	free(yvm);
+	exit(1);
+}
+
+typedef enum Err {
+	ERR_OK,
+	ERR_STACK_UNDERFLOW,
+	ERR_STACK_OVERFLOW,
+	ERR_ILLEGAL_INST,
+} Err;
+
+const char* err_as_cstr(Err e) {
+	switch(e) {
+	case ERR_OK:
+		return "ok";
+	case ERR_STACK_UNDERFLOW:
+		return "stack underflow";
+	case ERR_STACK_OVERFLOW:
+		return "stack overflow";
+	case ERR_ILLEGAL_INST:
+		return "illegal instruction";
+	default:
+		fputs("error unreacheable at err_as_cstr(...)\n", stderr);
+		exit(1);
+	}
+}
+
+Err yvm_exec_instr(YulaVM* yvm) {
+	Instr cur_inst = yvm->code[yvm->ip];
+	switch(cur_inst.type) {
+		case INSTR_PUSH:
+			break;
+		default:
+			fprintf(stderr, "illegal instruction\n");
+			dump_yvm_state(yvm);
+			err_destroy_yvm(yvm);
+			break;
+	}
+}
+
 #endif // __YVM_H__
