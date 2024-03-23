@@ -9,7 +9,7 @@
 
 void usage(std::ostream& stream) {
 	stream << "Incorrect usage. Correct usage is..." << std::endl;
-	stream << "bpm <input.bpm>" << std::endl;
+	stream << "yasm <input.yasm>" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
 		contents = contents_stream.str();
 	}
 
-	Tokenizer tokenizer(std::move(contents));
-	std::vector<Token> tokens = tokenizer.tokenize(argv[1]);
+	Lexer lexer(std::move(contents));
+	std::vector<Token> tokens = lexer.lex(argv[1]);
 
 	Parser parser(std::move(tokens));
 	std::optional<NodeProg> prog = parser.parse_prog();
@@ -38,13 +38,8 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	{
-		Generator generator(prog.value());
-		generator.get_props_from_parser(parser);
-		std::fstream file("output.asm", std::ios::out);
-		const std::string& generated_asm = generator.gen_prog();
-		file << generated_asm;
-	}
+	Generator generator(prog.value());
+	generator.gen_prog();
 
 	return EXIT_SUCCESS;
 }

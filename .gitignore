@@ -2,3 +2,4 @@
 *.exe
 *.bin
 git_push.bat
+input.yasm
