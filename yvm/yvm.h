@@ -14,19 +14,20 @@ typedef enum {
 typedef struct Instr {
 	InstrType type;
 	int operand;
-};
+} Instr;
 
 #define YVM_CODE_CAPACITY 12232
 #define YVM_MEM_CAPACITY 64000
 #define YVM_DEF_STACK_LOC 21000
 
 typedef struct YulaVM {
-	int* memory;
+	uint8_t* memory;
 	int stack_base;
 	int stack_head;
 	int v0;
 	int v1;
 	Instr code[YVM_CODE_CAPACITY];
+	int code_size;
 	int ip;
 } YulaVM;
 
@@ -36,6 +37,7 @@ void dump_yvm_state(YulaVM* yvm, FILE* stream) {
 	fprintf(stream, "    bp: %d,\n", yvm->stack_base);
 	fprintf(stream, "    sp: %d,\n", yvm->stack_head);
 	fprintf(stream, "    ip: %d,\n", yvm->ip);
+	fprintf(stream, "    code_size: %d,\n", yvm->code_size);
 	fprintf(stream, "    registers {\n");
 	fprintf(stream, "        v0: %d,\n", yvm->v0);
 	fprintf(stream, "        v1: %d\n", yvm->v1);
@@ -43,8 +45,8 @@ void dump_yvm_state(YulaVM* yvm, FILE* stream) {
 	fprintf(stream, "}\n");
 }
 
-void init_yvm(YulaVM* yvm, int memory_size, Arena* arena) {
-	yvm->memory = arena_alloc(arena, memory_size);
+void init_yvm(YulaVM* yvm, int memory_size) {
+	yvm->memory = malloc(memory_size);
 	yvm->ip = 0;
 	yvm->stack_base = YVM_DEF_STACK_LOC;
 	yvm->stack_head = YVM_DEF_STACK_LOC;
@@ -85,13 +87,53 @@ Err yvm_exec_instr(YulaVM* yvm) {
 	Instr cur_inst = yvm->code[yvm->ip];
 	switch(cur_inst.type) {
 		case INSTR_PUSH:
+		{
+			if(yvm->stack_head >= YVM_MEM_CAPACITY) {
+				return ERR_STACK_OVERFLOW;
+			}
+			*(int*)(&(yvm->memory[yvm->stack_head])) = cur_inst.operand;
+			yvm->stack_head += 4;
 			break;
+		}
 		default:
 			fprintf(stderr, "illegal instruction\n");
-			dump_yvm_state(yvm);
+			dump_yvm_state(yvm, stderr);
 			err_destroy_yvm(yvm);
 			break;
 	}
+	return ERR_OK;
+}
+
+const char* inst_as_cstr(InstrType type) {
+	switch(type) {
+	case INSTR_PUSH:
+		return "PUSH";
+	default:
+		return "UNKOWN";
+	}
+	return "UNKOWN";
+}
+
+void dump_instr(Instr in) {
+	printf("instr(type=`%s`, operand=%d)\n", inst_as_cstr(in.type), in.operand);
+}
+
+void yvm_exec_prog(YulaVM* yvm) {
+	for(int i = 0;i < yvm->code_size;++i) {
+		Err e = yvm_exec_instr(yvm);
+		if(e != ERR_OK) {
+			fprintf(stderr, "SIGNAL: %s\n", err_as_cstr(e));
+			err_destroy_yvm(yvm);
+		}
+	}
+}
+
+void yvm_load_bytecode(YulaVM* yvm, Instr* buffer, size_t size) {
+	size_t i = 0;
+	for(;i < size;++i) {
+		yvm->code[i] = buffer[i];
+	}
+	yvm->code_size = (int)i;
 }
 
 #endif // __YVM_H__

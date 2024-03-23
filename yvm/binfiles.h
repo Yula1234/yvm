@@ -22,13 +22,13 @@ int get_file_size_wp(const char* path) {
 	return sz;
 }
 
-void read_bin_file(const char* path, int* buffer) {
+void read_bin_file(const char* path, char* buffer) {
 	FILE* file = fopen(path, "rb");
 	fread(buffer, sizeof(char), FILE_SIZE, file);
 	fclose(file);
 }
 
-void write_bin_file(const char* path, int* buffer, int size) {
+void write_bin_file(const char* path, char* buffer, int size) {
 	FILE* file = fopen(path, "wb");
 	fwrite(buffer, sizeof(char), size, file);
 	fclose(file);
