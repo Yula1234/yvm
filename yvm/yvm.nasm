@@ -15,7 +15,6 @@ extern allocator_collect
 extern fputs
 extern printf
 
-%define YVM_MEM_CAPACITY 64000
 %define YVM_MEM_OFFSET 0
 %define YVM_STACK_BASE 4
 %define YVM_STACK_HEAD 8
@@ -30,13 +29,13 @@ yputs:
 	add esp, 8
 	ret
 
-init_yvm: ;[ebp+8](YulaVM* YVM) -> void
+init_yvm: ;[ebp+8](YulaVM* YVM), [ebp+12](int memory_size) -> void
 	push ebp
 	mov ebp, esp
 	sub esp, 4
 	mov edx, dword [ebp+8]
 	mov dword [ebp-4], edx ; [ebp-4] YulaVM*
-	push YVM_MEM_CAPACITY
+	push dword [ebp+12]
 	call allocator_alloc
 	add esp, 4
 	mov ebx, dword [ebp-4]
@@ -86,7 +85,7 @@ yvm_pop: ;[ebp+8](YulaVM* YVM) -> int
 	pop ebp
 	ret
 
-yvm_mov_v0:
+yvm_mov_v0: ; [ebp+8](YulaVM* yvm), [ebp+12](int value) -> void
 	push ebp
 	mov ebp, esp
 	mov edx, dword [ebp+8]
@@ -96,7 +95,7 @@ yvm_mov_v0:
 	pop ebp
 	ret
 
-yvm_mov_v1:
+yvm_mov_v1: ; [ebp+8](YulaVM* yvm), [ebp+12](int value) -> void
 	push ebp
 	mov ebp, esp
 	mov edx, dword [ebp+8]
