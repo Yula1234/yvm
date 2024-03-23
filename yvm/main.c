@@ -40,7 +40,6 @@ static bool __is_valid_reg_operand(int operand) {
 }
 
 bool yvm_exec_intruction(YulaVM* yvm, int instr, int operand) {
-	printf("exec(%d, %d)\n", instr, operand);
 	if(instr < INSTR_PUSH && instr > INSTR_COUNT) {
 		return false;
 	}
