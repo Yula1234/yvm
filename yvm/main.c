@@ -9,13 +9,14 @@ typedef struct YulaVM {
 } YulaVM;
 
 // yvm.nasm tools:
-void init_yvm(YulaVM*);
+void init_yvm(YulaVM* yvm);
+void yvm_push(YulaVM* yvm, int value);
+int yvm_pop(YulaVM* yvm);
 // end
 
 int main() {
 	YulaVM* _Yvm = allocator_alloc(sizeof(YulaVM));
 	init_yvm(_Yvm);
-	printf("_Yvm::stack_head = %d\n", _Yvm->stack_head);
 	allocator_collect();
 	return 0;
 }
