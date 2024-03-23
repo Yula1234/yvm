@@ -167,7 +167,7 @@ int main(int argc, const char* argv[]) {
 		usage(stderr);
 		exit(1);
 	}
-	make_hard_coded_program(argv[1]);
+
 	stack_base = (const uintptr_t*)__builtin_frame_address(0);
 	
 	YulaVM* _Yvm = allocator_alloc(sizeof(YulaVM));
