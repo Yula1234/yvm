@@ -15,6 +15,7 @@ void usage(std::ostream& stream) {
 
 enum class Flags {
 	run,
+	debug,
 };
 
 std::vector<Flags> collect_flags(int argc, char* argv[]) {
@@ -22,6 +23,9 @@ std::vector<Flags> collect_flags(int argc, char* argv[]) {
 	for(int i = 1;i < argc && argv[i][0] == '-';++i) {
 		if(strcmp(argv[i], "-r") == 0) {
 			flags.push_back(Flags::run);
+		}
+		else if(strcmp(argv[i], "-d") == 0) {
+			flags.push_back(Flags::debug);
 		}
 	}
 	return flags;
@@ -61,6 +65,12 @@ int main(int argc, char* argv[])
 
 	Generator generator(prog.value());
 	generator.gen_prog();
+
+	if(find_flag(flags, Flags::debug)) {
+		// run out.bin in YVM
+		// with enabled debuging
+		return system("yvm out.bin -d");
+	}
 
 	if(find_flag(flags, Flags::run)) {
 		// run out.bin in YVM

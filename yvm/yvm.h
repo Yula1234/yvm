@@ -210,9 +210,42 @@ Err yvm_pop(YulaVM* yvm, int* to) {
 	return ERR_OK;
 }
 
-Err yvm_exec_instr(YulaVM* yvm) {
+const char* __reg_no_to_cstr(int reg) {
+	if(reg == REG_V0) {
+		return "v0";
+	}
+	if(reg == REG_V1) {
+		return "v1";
+	}
+	return "v0";
+}
+
+void __process_debug_cstate(YulaVM* yvm) {
 	Instr cur_inst = yvm->code[yvm->ip];
-	//dump_instr(cur_inst);
+	if(cur_inst.type == INSTR_RPUSH)        printf("(ydb) rpush %s", __reg_no_to_cstr(cur_inst.operand));
+	else if(cur_inst.type == INSTR_MOV_V0)  printf("(ydb) mov v0, %d", cur_inst.operand);
+	else if(cur_inst.type == INSTR_MOV_V1)  printf("(ydb) mov v1, %d", cur_inst.operand);
+	else if(cur_inst.type == INSTR_POP)     printf("(ydb) pop %s", __reg_no_to_cstr(cur_inst.operand));
+	else if(cur_inst.type == INSTR_ADD)     printf("(ydb) add");
+	else if(cur_inst.type == INSTR_SYSCALL) printf("(ydb) syscall");
+	else printf("(ydb) %s %d", inst_as_cstr(cur_inst.type), cur_inst.operand);
+	if(yvm->ip == 0 && cur_inst.type == INSTR_JMP) {
+		fputs(" (jump to entry)", stdout);
+	}
+	if(cur_inst.type == INSTR_SYSCALL) {
+		if(yvm->v0 == 0)      printf(" (dump state)");
+		else if(yvm->v0 == 1) printf(" (dump v1)");
+		else if(yvm->v0 == 2) printf(" (exit)");
+		else printf("WARNING: unkown syscall_no");
+	}
+}
+
+Err yvm_exec_instr(YulaVM* yvm, bool debug) {
+	Instr cur_inst = yvm->code[yvm->ip];
+	if(debug) {
+		__process_debug_cstate(yvm);
+		getc(stdin);
+	}
 	switch(cur_inst.type) {
 		case INSTR_PUSH:
 		{
@@ -359,13 +392,22 @@ Err yvm_exec_instr(YulaVM* yvm) {
 	return ERR_OK;
 }
 
-void yvm_exec_prog(YulaVM* yvm) {
+void yvm_exec_prog(YulaVM* yvm, bool debug) {
+	if(debug) {
+		printf("start debuging...\n");
+		printf("for execute next instruction press `enter`");
+		getc(stdin);
+	}
 	for(;yvm->ip < yvm->code_size;) {
-		Err e = yvm_exec_instr(yvm);
+		Err e = yvm_exec_instr(yvm, debug);
 		if(e != ERR_OK) {
 			fprintf(stderr, "SIGNAL: %s\n", err_as_cstr(e));
 			err_destroy_yvm(yvm);
 		}
+	}
+	if(debug) {
+		printf("(ydb) end");
+		getc(stdin);
 	}
 }
 

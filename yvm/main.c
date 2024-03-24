@@ -11,20 +11,32 @@ void usage(FILE* stream) {
 }
 
 int main(int argc, const char* argv[]) {
+	
 	if(argc < 2) {
 		usage(stderr);
 		exit(1);
 	}
+
 	YulaVM* _Yvm = malloc(sizeof(YulaVM));
 	init_yvm(_Yvm, YVM_MEM_CAPACITY);
+	
 	FILE_SIZE = get_file_size_wp(argv[1]);
 	Instr* buffer = (Instr*)malloc(FILE_SIZE);
 	read_bin_file(argv[1], (char*)buffer);
 
 	yvm_load_bytecode(_Yvm, buffer, (FILE_SIZE - 8) / sizeof(Instr), tmp_buf);
-	yvm_exec_prog(_Yvm);
+	
+	bool debug = false;
+	if(argc > 2) {
+		if(strcmp(argv[2], "-d") == 0) {
+			debug = true;
+		}
+	}
+
+	yvm_exec_prog(_Yvm, debug);
 
 	free(_Yvm);
 	free(buffer);
+
 	return 0;
 }
