@@ -13,6 +13,8 @@ enum class TokenType {
     pop,
     reg,
     comma,
+    double_dot,
+    jmp,
 };
 
 std::string tok_to_string(const TokenType type)
@@ -34,6 +36,10 @@ std::string tok_to_string(const TokenType type)
         return "`register`";
     case TokenType::comma:
         return "`,`";
+    case TokenType::double_dot:
+        return "`:`";
+    case TokenType::jmp:
+        return "`jmp`";
     }
     assert(false);
 }
@@ -111,6 +117,10 @@ public:
                     tokens.push_back({ .type = TokenType::mov, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
                     buf.clear();
                 }
+                else if(buf == "jmp") {
+                    tokens.push_back({ .type = TokenType::jmp, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
                 else if(buf == "v0" || buf == "v1") {
                     tokens.push_back({ .type = TokenType::reg, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .value = buf, .file = file });
                     buf.clear();
@@ -138,6 +148,10 @@ public:
             else if (peek().value() == ',') {
                 consume();
                 tokens.push_back({ .type = TokenType::comma, .line = line_count, .col = m_col - 1, .file = file });
+            }
+            else if (peek().value() == ':') {
+                consume();
+                tokens.push_back({ .type = TokenType::double_dot, .line = line_count, .col = m_col - 1, .file = file });
             }
             else if(peek().value() == '\'') {
                 consume();

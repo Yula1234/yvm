@@ -30,6 +30,7 @@ typedef enum {
 	INSTR_SYSCALL = 2,
 	INSTR_MOV_V0 = 3,
 	INSTR_MOV_V1 = 4,
+	INSTR_JMP = 5,
 } InstrType;
 
 typedef struct Instr {
@@ -60,6 +61,26 @@ typedef struct Yvm_Out_file {
 
 class Generator {
 public:
+	struct Label {
+		size_t addr;
+		std::string name;
+	};
+
+	struct UnresolvedSymbol {
+		Instr* in;
+		std::string symbol;
+		Token def;
+	};
+
+	std::optional<Label> label_lookup(std::string name) {
+		for(int i = 0;i < static_cast<int>(m_labels.size());++i) {
+			if(m_labels[i].name == name) {
+				return m_labels[i];
+			}
+		}
+		return std::nullopt;
+	}
+
 	explicit Generator(NodeProg prog)
 		: m_prog(std::move(prog))
 	{
@@ -131,6 +152,24 @@ public:
 				Instr in = { .type = INSTR_SYSCALL, .operand = 0 };
 				gen.m_output << in;
 			}
+
+			void operator()(const NodeStmtLabel* stmt_label) const
+			{
+				gen.m_labels.push_back({ .addr = gen.m_output.m_count , .name = stmt_label->name });
+			}
+
+			void operator()(const NodeStmtJmp* stmt_jmp) const
+			{
+				std::optional<Label> label = gen.label_lookup(stmt_jmp->label);
+				if(!label.has_value()) {
+					Instr in = { .type = INSTR_JMP, .operand = 0 };
+					gen.m_output << in;
+					gen.m_unresolved_symbols.push_back({ .in = &gen.m_output.m_code[gen.m_output.m_count - 1] , .symbol = stmt_jmp->label, .def = stmt_jmp->def });
+					return;
+				}
+				Instr in = { .type = INSTR_JMP, .operand = static_cast<int>(label.value().addr) };
+				gen.m_output << in;
+			}
 		};
 
 		StmtVisitor visitor { .gen = *this };
@@ -139,13 +178,24 @@ public:
 
 	void gen_prog()
 	{
-		for (const NodeStmt* stmt : m_prog.stmts) {
+		for(const NodeStmt* stmt : m_prog.stmts) {
 			gen_stmt(stmt);
+		}
+		for(int i = 0;i < static_cast<int>(m_unresolved_symbols.size());++i) {
+			UnresolvedSymbol us = m_unresolved_symbols[i];
+			std::optional<Label> label = label_lookup(us.symbol);
+			if(label.has_value()) {
+				us.in->operand = static_cast<int>(label.value().addr);
+				continue;
+			}
+			GeneratorError(us.def, "undefined symbol `" + us.symbol + "`");
 		}
 		m_output.write("out.bin");
 	}
 
 private:
 	const NodeProg m_prog;
+	std::vector<Label> m_labels;
+	std::vector<UnresolvedSymbol> m_unresolved_symbols;
 	Yvm_Out_file m_output;
 };

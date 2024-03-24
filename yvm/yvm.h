@@ -14,6 +14,7 @@ typedef enum {
 	INSTR_SYSCALL = 2,
 	INSTR_MOV_V0 = 3,
 	INSTR_MOV_V1 = 4,
+	INSTR_JMP = 5,
 } InstrType;
 
 typedef struct Instr {
@@ -105,8 +106,9 @@ int* __find_reg(YulaVM* yvm, int reg) {
 }
 
 typedef enum __sycall_no_ {
-	__syscall_dump_state,
-	__syscall_dump_v1,
+	__syscall_dump_state = 0,
+	__syscall_dump_v1 = 1,
+	__syscall_exit = 2,
 } __sycall_no_;
 
 Err __invoke_syscall(YulaVM* yvm) {
@@ -118,6 +120,11 @@ Err __invoke_syscall(YulaVM* yvm) {
 	if(__syscall_no == __syscall_dump_v1) {
 		printf("%d\n", yvm->v1);
 		return ERR_OK;
+	}
+	if(__syscall_no == __syscall_exit) {
+		free(yvm->memory);
+		free(yvm);
+		exit(yvm->v1);
 	}
 	return ERR_ILLEGAL_SYSCALL_NO;
 }
@@ -185,6 +192,11 @@ Err yvm_exec_instr(YulaVM* yvm) {
 		{
 			yvm->ip += 1;
 			return __invoke_syscall(yvm);
+			break;
+		}
+		case INSTR_JMP:
+		{
+			yvm->ip = cur_inst.operand;
 			break;
 		}
 		default:

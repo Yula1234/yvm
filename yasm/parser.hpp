@@ -42,9 +42,20 @@ struct NodeStmtSyscall {
 	Token def;
 };
 
+struct NodeStmtLabel {
+	Token def;
+	std::string name;
+};
+
+struct NodeStmtJmp {
+	Token def;
+	std::string label;
+};
+
 struct NodeStmt {
 	std::variant<NodeStmtPush*, NodeStmtMov*,
-				NodeStmtPop*, NodeStmtSyscall*> var;
+				NodeStmtPop*, NodeStmtSyscall*,
+				NodeStmtLabel*, NodeStmtJmp*> var;
 };
 
 struct NodeProg {
@@ -153,7 +164,22 @@ public:
 			return stmt;
 		}
 
-		// TODO: parse syscall
+		if(auto _jmp = try_consume(TokenType::jmp)) {
+			auto jmp_stmt = m_allocator.emplace<NodeStmtJmp>();
+			jmp_stmt->def = _jmp.value();
+			jmp_stmt->label = try_consume_err(TokenType::ident).value.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(jmp_stmt);
+			return stmt;
+		}
+
+		if(auto label = try_consume(TokenType::ident)) {
+			try_consume_err(TokenType::double_dot);
+			auto label_stmt = m_allocator.emplace<NodeStmtLabel>();
+			label_stmt->def = label.value();
+			label_stmt->name = label.value().value.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(label_stmt);
+			return stmt;
+		}
 
 		return {};
 	}
