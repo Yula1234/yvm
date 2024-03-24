@@ -22,8 +22,13 @@ int get_file_size_wp(const char* path) {
 	return sz;
 }
 
+char tmp_buf[12];
+char tmp_buf2[12];
+
 void read_bin_file(const char* path, char* buffer) {
 	FILE* file = fopen(path, "rb");
+	fread(tmp_buf, sizeof(char), 2, file);
+	fread(tmp_buf2, sizeof(char), 6, file);
 	fread(buffer, sizeof(char), FILE_SIZE, file);
 	fclose(file);
 }

@@ -176,17 +176,15 @@ void yvm_exec_prog(YulaVM* yvm) {
 	}
 }
 
-void yvm_load_bytecode(YulaVM* yvm, Instr* buffer, size_t size) {
+void yvm_load_bytecode(YulaVM* yvm, Instr* buffer, size_t size, char* magic) {
 	size_t i = 0;
 	Instr* buf = buffer;
-	char* cbuf = (char*)buf;
-	if(cbuf[0] != 'Y' && cbuf[1] != 'M') {
+	if(magic[0] != 'Y' && magic[1] != 'M') {
 		fputs("ERROR: not yvm bytecode provided\n", stderr);
+		exit(1);
 	}
 	for(;i < size;++i) {
-		if(i != 0) {
-			yvm->code[i] = buf[i];
-		}
+		yvm->code[i] = buf[i];
 	}
 	yvm->code_size = (int)i;
 }
