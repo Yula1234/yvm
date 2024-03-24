@@ -203,6 +203,23 @@ public:
 				gen.m_output << in;
 			}
 
+			void operator()(const NodeStmtCall* stmt_call) const
+			{
+				Yvm_Out_file& out = gen.m_output;
+				if(!stmt_call->expr.has_value()) {
+					gen.GeneratorError(stmt_call->def, "call from stack not supported"); // TODO: add support for with
+				}
+				Instr ipush = { .type = INSTR_PUSH_IP, .operand = 0 };
+				out << ipush;
+				Instr push_num = { .type = INSTR_PUSH, .operand = 3 };
+				out << push_num;
+				Instr add = { .type = INSTR_ADD, .operand = 0 };
+				out << add;
+				out << gen.gen_expr(stmt_call->expr.value());
+				Instr sjmp = { .type = INSTR_JMP_ONSTACK, .operand = 0 };
+				out << sjmp;
+			}
+
 			void operator()(const NodeStmtBpush* stmt_bpush) const
 			{
 				consume_un(stmt_bpush);

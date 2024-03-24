@@ -24,6 +24,7 @@ enum class TokenType {
     bpush,
     spush,
     sjmp,
+    call,
 };
 
 std::string tok_to_string(const TokenType type)
@@ -67,6 +68,8 @@ std::string tok_to_string(const TokenType type)
         return "`bpush`";
     case TokenType::sjmp:
         return "`sjmp`";
+    case TokenType::call:
+        return "`call`";
     }
     assert(false);
 }
@@ -182,6 +185,10 @@ public:
                 }
                 else if(buf == "sjmp") {
                     tokens.push_back({ .type = TokenType::sjmp, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "call") {
+                    tokens.push_back({ .type = TokenType::call, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
                     buf.clear();
                 }
                 else if(buf == "v0" || buf == "v1") {

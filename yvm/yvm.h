@@ -212,6 +212,7 @@ Err yvm_pop(YulaVM* yvm, int* to) {
 
 Err yvm_exec_instr(YulaVM* yvm) {
 	Instr cur_inst = yvm->code[yvm->ip];
+	//dump_instr(cur_inst);
 	switch(cur_inst.type) {
 		case INSTR_PUSH:
 		{

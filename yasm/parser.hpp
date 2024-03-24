@@ -93,6 +93,11 @@ struct NodeStmtEntry {
 	std::string name;
 };
 
+struct NodeStmtCall {
+	Token def;
+	std::optional<NodeExpr*> expr;
+};
+
 struct NodeStmt {
 	std::variant<NodeStmtPush*, NodeStmtMov*,
 				NodeStmtPop*, NodeStmtSyscall*,
@@ -101,7 +106,7 @@ struct NodeStmt {
 				NodeStmtMul*, NodeStmtDiv*,
 				NodeStmtEntry*, NodeStmtIpush*,
 				NodeStmtSpush*, NodeStmtBpush*,
-				NodeStmtSjmp*> var;
+				NodeStmtSjmp*, NodeStmtCall*> var;
 };
 
 struct NodeProg {
@@ -246,6 +251,18 @@ public:
 			jmp_stmt->def = _jmp.value();
 			jmp_stmt->label = try_consume_err(TokenType::ident).value.value();
 			auto stmt = m_allocator.emplace<NodeStmt>(jmp_stmt);
+			return stmt;
+		}
+
+		if(auto _call = try_consume(TokenType::call)) {
+			auto call_stmt = m_allocator.emplace<NodeStmtCall>();
+			call_stmt->def = _call.value();
+			if(auto expr = parse_expr()) {
+				call_stmt->expr = expr;
+			} else {
+				call_stmt->expr = std::nullopt;
+			}
+			auto stmt = m_allocator.emplace<NodeStmt>(call_stmt);
 			return stmt;
 		}
 
