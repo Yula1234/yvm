@@ -31,6 +31,11 @@ typedef enum {
 	INSTR_MOV_V0 = 3,
 	INSTR_MOV_V1 = 4,
 	INSTR_JMP = 5,
+	INSTR_ADD = 6,
+	INSTR_SUB = 7,
+	INSTR_MUL = 8,
+	INSTR_DIV = 9,
+	INSTR_RPUSH = 10,
 } InstrType;
 
 typedef struct Instr {
@@ -42,9 +47,10 @@ typedef struct Yvm_Out_file {
 	size_t m_count = 0ULL;
 	Instr m_code[65000];
 	
-	friend void operator<<(Yvm_Out_file& outf, Instr in) {
+	friend Yvm_Out_file& operator<<(Yvm_Out_file& outf, Instr in) {
 		outf.m_code[outf.m_count] = in;
 		outf.m_count += 1ULL;
+		return outf;
 	}
 
 	void write(std::string path) {
@@ -52,7 +58,6 @@ typedef struct Yvm_Out_file {
 
 		fwrite("YM", sizeof(char), 2, file);
 		fwrite("\0\0\0\0\0\0", sizeof(char), 6, file);
-		
 		fwrite(reinterpret_cast<char*>(m_code), sizeof(Instr), m_count, file);
 		
 		fclose(file);
@@ -111,6 +116,9 @@ public:
 
 			void operator()(const NodeStmtPush* stmt_push) const
 			{
+				if(!std::holds_alternative<NodeExprIntLit*>(stmt_push->expr->var)) {
+					gen.GeneratorError(stmt_push->def, "push except int literal");
+				}
 				gen.m_output << gen.gen_expr(stmt_push->expr);
 			}
 
@@ -150,6 +158,34 @@ public:
 			{
 				consume_un(stmt_syscall);
 				Instr in = { .type = INSTR_SYSCALL, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtAdd* stmt_add) const
+			{
+				consume_un(stmt_add);
+				Instr in = { .type = INSTR_ADD, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtSub* stmt_sub) const
+			{
+				consume_un(stmt_sub);
+				Instr in = { .type = INSTR_SUB, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtMul* stmt_mul) const
+			{
+				consume_un(stmt_mul);
+				Instr in = { .type = INSTR_MUL, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtDiv* stmt_div) const
+			{
+				consume_un(stmt_div);
+				Instr in = { .type = INSTR_DIV, .operand = 0 };
 				gen.m_output << in;
 			}
 

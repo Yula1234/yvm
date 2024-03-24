@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 #include "arena.h"
 
 typedef enum {
@@ -15,6 +16,11 @@ typedef enum {
 	INSTR_MOV_V0 = 3,
 	INSTR_MOV_V1 = 4,
 	INSTR_JMP = 5,
+	INSTR_ADD = 6,
+	INSTR_SUB = 7,
+	INSTR_MUL = 8,
+	INSTR_DIV = 9,
+	INSTR_RPUSH = 10,
 } InstrType;
 
 typedef struct Instr {
@@ -132,13 +138,27 @@ Err __invoke_syscall(YulaVM* yvm) {
 const char* inst_as_cstr(InstrType type) {
 	switch(type) {
 	case INSTR_PUSH:
-		return "PUSH";
+		return "push";
 	case INSTR_POP:
-		return "POP";
+		return "pop";
 	case INSTR_MOV_V0:
 		return "mov v0";
 	case INSTR_SYSCALL:
 		return "syscall";
+	case INSTR_MOV_V1:
+		return "mov v1";
+	case INSTR_JMP:
+		return "jmp";
+	case INSTR_ADD:
+		return "add";
+	case INSTR_SUB:
+		return "sub";
+	case INSTR_MUL:
+		return "mul";
+	case INSTR_DIV:
+		return "div";
+	case INSTR_RPUSH:
+		return "rpush";
 	default:
 		return "UNKOWN";
 	}
@@ -149,31 +169,57 @@ void dump_instr(Instr in) {
 	printf("instr(type=`%s`, operand=%d)\n", inst_as_cstr(in.type), in.operand);
 }
 
+Err yvm_push(YulaVM* yvm, int value) {
+	int _value = value;
+	int* __value = &_value;
+	if(yvm->stack_head >= YVM_MEM_CAPACITY) {
+		return ERR_STACK_OVERFLOW;
+	}
+	uint8_t* sp = &yvm->memory[yvm->stack_head];
+	memcpy(sp, __value, 4);
+	*sp = value;
+	yvm->stack_head += 4;
+	return ERR_OK;
+}
+
+bool yvm_can_pop(YulaVM* yvm) {
+	if(yvm->stack_base <= yvm->stack_head) {
+		return true;
+	}
+	return false;
+}
+
+Err yvm_pop(YulaVM* yvm, int* to) {
+	if(!yvm_can_pop(yvm)) {
+		return ERR_STACK_UNDERFLOW;
+	}
+	yvm->stack_head -= 4;
+	*to = *(int*)&yvm->memory[yvm->stack_head];
+	return ERR_OK;
+}
+
 Err yvm_exec_instr(YulaVM* yvm) {
 	Instr cur_inst = yvm->code[yvm->ip];
 	switch(cur_inst.type) {
 		case INSTR_PUSH:
 		{
-			if(yvm->stack_head >= YVM_MEM_CAPACITY) {
-				return ERR_STACK_OVERFLOW;
-			}
-			uint8_t* sp = &yvm->memory[yvm->stack_head];
-			int* op = &cur_inst.operand;
-			memcpy(sp, op, 4);
-			*sp = cur_inst.operand;
-			yvm->stack_head += 4;
+			Err e = yvm_push(yvm, cur_inst.operand);
 			yvm->ip += 1;
+			return e;
+			break;
+		}
+		case INSTR_RPUSH:
+		{
+			Err e = yvm_push(yvm, __find_reg(cur_inst.operand));
+			yvm->ip += 1;
+			return e;
 			break;
 		}
 		case INSTR_POP:
 		{
-			if(yvm->stack_base >= yvm->stack_head) {
-				return ERR_STACK_UNDERFLOW;
-			}
-			int* reg = __find_reg(yvm, cur_inst.operand);
-			yvm->stack_head -= 4;
-			*reg = *(int*)&yvm->memory[yvm->stack_head];
+			Err e = yvm_pop(yvm, __find_reg(yvm, cur_inst.operand));
 			yvm->ip += 1;
+			return e;
 			break;
 		}
 		case INSTR_MOV_V0:
@@ -199,11 +245,72 @@ Err yvm_exec_instr(YulaVM* yvm) {
 			yvm->ip = cur_inst.operand;
 			break;
 		}
-		default:
-			fprintf(stderr, "illegal instruction %d\n", cur_inst.type);
-			dump_yvm_state(yvm, stderr);
-			err_destroy_yvm(yvm);
+		case INSTR_ADD:
+		{
+			int one;
+			int two;
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &two);
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &one);
+			yvm_push(yvm, one + two);
+			yvm->ip += 1;
 			break;
+		}
+		case INSTR_SUB:
+		{
+			int one;
+			int two;
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &two);
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &one);
+			yvm_push(yvm, one - two);
+			yvm->ip += 1;
+			break;
+		}
+		case INSTR_MUL:
+		{
+			int one;
+			int two;
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &two);
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &one);
+			yvm_push(yvm, one * two);
+			yvm->ip += 1;
+			break;
+		}
+		case INSTR_DIV:
+		{
+			int one;
+			int two;
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &two);
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &one);
+			yvm_push(yvm, one / two);
+			yvm->ip += 1;
+			break;
+		}
+		default:
+			return ERR_ILLEGAL_INST;
 	}
 	return ERR_OK;
 }

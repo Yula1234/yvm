@@ -47,6 +47,22 @@ struct NodeStmtLabel {
 	std::string name;
 };
 
+struct NodeStmtAdd {
+	Token def;
+};
+
+struct NodeStmtSub {
+	Token def;
+};
+
+struct NodeStmtMul {
+	Token def;
+};
+
+struct NodeStmtDiv {
+	Token def;
+};
+
 struct NodeStmtJmp {
 	Token def;
 	std::string label;
@@ -55,7 +71,9 @@ struct NodeStmtJmp {
 struct NodeStmt {
 	std::variant<NodeStmtPush*, NodeStmtMov*,
 				NodeStmtPop*, NodeStmtSyscall*,
-				NodeStmtLabel*, NodeStmtJmp*> var;
+				NodeStmtLabel*, NodeStmtJmp*,
+				NodeStmtAdd*, NodeStmtSub*,
+				NodeStmtMul*, NodeStmtDiv*> var;
 };
 
 struct NodeProg {
@@ -161,6 +179,34 @@ public:
 			auto syscall_stmt = m_allocator.emplace<NodeStmtSyscall>();
 			syscall_stmt->def = syscall.value();
 			auto stmt = m_allocator.emplace<NodeStmt>(syscall_stmt);
+			return stmt;
+		}
+
+		if(auto _add = try_consume(TokenType::add)) {
+			auto add_stmt = m_allocator.emplace<NodeStmtAdd>();
+			add_stmt->def = _add.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(add_stmt);
+			return stmt;
+		}
+
+		if(auto _sub = try_consume(TokenType::sub)) {
+			auto sub_stmt = m_allocator.emplace<NodeStmtSub>();
+			sub_stmt->def = _sub.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(sub_stmt);
+			return stmt;
+		}
+
+		if(auto _mul = try_consume(TokenType::mul)) {
+			auto mul_stmt = m_allocator.emplace<NodeStmtMul>();
+			mul_stmt->def = _mul.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(mul_stmt);
+			return stmt;
+		}
+
+		if(auto _div = try_consume(TokenType::div)) {
+			auto div_stmt = m_allocator.emplace<NodeStmtDiv>();
+			div_stmt->def = _div.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(div_stmt);
 			return stmt;
 		}
 

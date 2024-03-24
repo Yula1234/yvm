@@ -15,6 +15,10 @@ enum class TokenType {
     comma,
     double_dot,
     jmp,
+    add,
+    sub,
+    mul,
+    div,
 };
 
 std::string tok_to_string(const TokenType type)
@@ -40,6 +44,14 @@ std::string tok_to_string(const TokenType type)
         return "`:`";
     case TokenType::jmp:
         return "`jmp`";
+    case TokenType::add:
+        return "`add`";
+    case TokenType::sub:
+        return "`sub`";
+    case TokenType::mul:
+        return "`mul`";
+    case TokenType::div:
+        return "`div`";
     }
     assert(false);
 }
@@ -119,6 +131,22 @@ public:
                 }
                 else if(buf == "jmp") {
                     tokens.push_back({ .type = TokenType::jmp, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "add") {
+                    tokens.push_back({ .type = TokenType::add, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "sub") {
+                    tokens.push_back({ .type = TokenType::sub, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "mul") {
+                    tokens.push_back({ .type = TokenType::mul, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "div") {
+                    tokens.push_back({ .type = TokenType::div, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
                     buf.clear();
                 }
                 else if(buf == "v0" || buf == "v1") {
