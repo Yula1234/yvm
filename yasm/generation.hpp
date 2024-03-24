@@ -36,6 +36,10 @@ typedef enum {
 	INSTR_MUL = 8,
 	INSTR_DIV = 9,
 	INSTR_RPUSH = 10,
+	INSTR_PUSH_IP = 11,
+	INSTR_PUSH_BP = 12,
+	INSTR_PUSH_SP = 13,
+	INSTR_JMP_ONSTACK = 14,
 } InstrType;
 
 typedef struct Instr {
@@ -101,10 +105,26 @@ public:
 		return { .type = INSTR_PUSH, .operand = std::stoi(expr->int_lit.value.value()) };
 	}
 
+	Instr m_compile_ident(NodeExprIdent* ident) {
+		std::optional<Label> label = label_lookup(ident->ident.value.value());
+		if(!label.has_value()) {
+			Instr in = { .type = INSTR_JMP, .operand = 0 };
+			m_unresolved_symbols.push_back({ .in = &m_output.m_code[m_output.m_count - 1] , .symbol = ident->ident.value.value(), .def = ident->ident });
+			m_has_entry = true;
+			return in;
+		}
+		m_has_entry = true;
+		Instr in = { .type = INSTR_JMP, .operand = static_cast<int>(label.value().addr) };
+		return in;
+	}
+
 	Instr gen_expr(const NodeExpr* expr)
 	{
 		if(std::holds_alternative<NodeExprIntLit*>(expr->var)) {
 			return m_compile_int(std::get<NodeExprIntLit*>(expr->var));
+		}
+		if(std::holds_alternative<NodeExprIdent*>(expr->var)) {
+			return m_compile_ident(std::get<NodeExprIdent*>(expr->var));
 		}
 		assert(false && "unreacheable");
 	}
@@ -116,10 +136,18 @@ public:
 
 			void operator()(const NodeStmtPush* stmt_push) const
 			{
-				if(!std::holds_alternative<NodeExprIntLit*>(stmt_push->expr->var)) {
-					gen.GeneratorError(stmt_push->def, "push except int literal");
+				if(std::holds_alternative<NodeExprIntLit*>(stmt_push->expr->var)) {
+					gen.m_output << gen.gen_expr(stmt_push->expr);
 				}
-				gen.m_output << gen.gen_expr(stmt_push->expr);
+				if(std::holds_alternative<NodeExprReg*>(stmt_push->expr->var)) {
+					NodeExprReg* reg_p = std::get<NodeExprReg*>(stmt_push->expr->var);
+					int REG = __reg_to_no(reg_p->name);
+					Instr in = { .type = INSTR_RPUSH, .operand = REG };
+					gen.m_output << in;
+				}
+				if(std::holds_alternative<NodeExprIdent*>(stmt_push->expr->var)) {
+					gen.m_output << gen.gen_expr(stmt_push->expr);
+				}
 			}
 
 			void operator()(const NodeStmtPop* stmt_pop) const
@@ -158,6 +186,34 @@ public:
 			{
 				consume_un(stmt_syscall);
 				Instr in = { .type = INSTR_SYSCALL, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtIpush* stmt_ipush) const
+			{
+				consume_un(stmt_ipush);
+				Instr in = { .type = INSTR_PUSH_IP, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtSpush* stmt_spush) const
+			{
+				consume_un(stmt_spush);
+				Instr in = { .type = INSTR_PUSH_SP, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtBpush* stmt_bpush) const
+			{
+				consume_un(stmt_bpush);
+				Instr in = { .type = INSTR_PUSH_BP, .operand = 0 };
+				gen.m_output << in;
+			}
+
+			void operator()(const NodeStmtSjmp* stmt_sjmp) const
+			{
+				consume_un(stmt_sjmp);
+				Instr in = { .type = INSTR_JMP_ONSTACK, .operand = 0 };
 				gen.m_output << in;
 			}
 
@@ -206,6 +262,21 @@ public:
 				Instr in = { .type = INSTR_JMP, .operand = static_cast<int>(label.value().addr) };
 				gen.m_output << in;
 			}
+
+			void operator()(const NodeStmtEntry* stmt_entry) const
+			{
+				std::optional<Label> label = gen.label_lookup(stmt_entry->name);
+				if(!label.has_value()) {
+					Instr in = { .type = INSTR_JMP, .operand = 0 };
+					gen.m_output << in;
+					gen.m_unresolved_symbols.push_back({ .in = &gen.m_output.m_code[gen.m_output.m_count - 1] , .symbol = stmt_entry->name, .def = stmt_entry->def });
+					gen.m_has_entry = true;
+					return;
+				}
+				gen.m_has_entry = true;
+				Instr in = { .type = INSTR_JMP, .operand = static_cast<int>(label.value().addr) };
+				gen.m_output << in;
+			}
 		};
 
 		StmtVisitor visitor { .gen = *this };
@@ -216,6 +287,10 @@ public:
 	{
 		for(const NodeStmt* stmt : m_prog.stmts) {
 			gen_stmt(stmt);
+		}
+		if(!m_has_entry) {
+			std::cerr << "entry not provided!\n";
+			exit(1);
 		}
 		for(int i = 0;i < static_cast<int>(m_unresolved_symbols.size());++i) {
 			UnresolvedSymbol us = m_unresolved_symbols[i];
@@ -231,6 +306,7 @@ public:
 
 private:
 	const NodeProg m_prog;
+	bool m_has_entry = false;
 	std::vector<Label> m_labels;
 	std::vector<UnresolvedSymbol> m_unresolved_symbols;
 	Yvm_Out_file m_output;

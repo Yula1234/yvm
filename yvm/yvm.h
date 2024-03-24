@@ -21,6 +21,10 @@ typedef enum {
 	INSTR_MUL = 8,
 	INSTR_DIV = 9,
 	INSTR_RPUSH = 10,
+	INSTR_PUSH_IP = 11,
+	INSTR_PUSH_BP = 12,
+	INSTR_PUSH_SP = 13,
+	INSTR_JMP_ONSTACK = 14,
 } InstrType;
 
 typedef struct Instr {
@@ -159,6 +163,14 @@ const char* inst_as_cstr(InstrType type) {
 		return "div";
 	case INSTR_RPUSH:
 		return "rpush";
+	case INSTR_PUSH_IP:
+		return "sip";
+	case INSTR_PUSH_BP:
+		return "bpush";
+	case INSTR_PUSH_SP:
+		return "spush";
+	case INSTR_JMP_ONSTACK:
+		return "sjmp";
 	default:
 		return "UNKOWN";
 	}
@@ -208,9 +220,40 @@ Err yvm_exec_instr(YulaVM* yvm) {
 			return e;
 			break;
 		}
+		case INSTR_PUSH_IP:
+		{
+			yvm->ip += 1;
+			Err e = yvm_push(yvm, yvm->ip);
+			return e;
+			break;
+		}
+		case INSTR_PUSH_BP:
+		{
+			Err e = yvm_push(yvm, yvm->stack_base);
+			yvm->ip += 1;
+			return e;
+			break;
+		}
+		case INSTR_PUSH_SP:
+		{
+			Err e = yvm_push(yvm, yvm->stack_head);
+			yvm->ip += 1;
+			return e;
+			break;
+		}
+		case INSTR_JMP_ONSTACK:
+		{
+			int addr;
+			if(!yvm_can_pop(yvm)) {
+				return ERR_STACK_UNDERFLOW;
+			}
+			yvm_pop(yvm, &addr);
+			yvm->ip = addr;
+			break;
+		}
 		case INSTR_RPUSH:
 		{
-			Err e = yvm_push(yvm, __find_reg(cur_inst.operand));
+			Err e = yvm_push(yvm, *__find_reg(yvm, cur_inst.operand));
 			yvm->ip += 1;
 			return e;
 			break;

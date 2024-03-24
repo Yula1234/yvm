@@ -18,8 +18,12 @@ struct NodeExprReg {
 	std::string name;
 };
 
+struct NodeExprIdent {
+	Token ident;
+};
+
 struct NodeExpr {
-	std::variant<NodeExprIntLit*, NodeExprReg*> var;
+	std::variant<NodeExprIntLit*, NodeExprReg*, NodeExprIdent*> var;
 };
 
 struct NodeStmtPush {
@@ -63,9 +67,30 @@ struct NodeStmtDiv {
 	Token def;
 };
 
+struct NodeStmtIpush {
+	Token def;
+};
+
+struct NodeStmtBpush {
+	Token def;
+};
+
+struct NodeStmtSpush {
+	Token def;
+};
+
+struct NodeStmtSjmp {
+	Token def;
+};
+
 struct NodeStmtJmp {
 	Token def;
 	std::string label;
+};
+
+struct NodeStmtEntry {
+	Token def;
+	std::string name;
 };
 
 struct NodeStmt {
@@ -73,7 +98,10 @@ struct NodeStmt {
 				NodeStmtPop*, NodeStmtSyscall*,
 				NodeStmtLabel*, NodeStmtJmp*,
 				NodeStmtAdd*, NodeStmtSub*,
-				NodeStmtMul*, NodeStmtDiv*> var;
+				NodeStmtMul*, NodeStmtDiv*,
+				NodeStmtEntry*, NodeStmtIpush*,
+				NodeStmtSpush*, NodeStmtBpush*,
+				NodeStmtSjmp*> var;
 };
 
 struct NodeProg {
@@ -130,7 +158,10 @@ public:
 			return expr;
 		}
 		if(auto ident = try_consume(TokenType::ident)) {
-			assert(false && "unkown identifer");
+			auto expr_ident = m_allocator.emplace<NodeExprIdent>();
+			expr_ident->ident = ident.value();
+			auto expr = m_allocator.emplace<NodeExpr>(expr_ident);
+			return expr;
 		}
 		return {};
 	}
@@ -218,12 +249,48 @@ public:
 			return stmt;
 		}
 
+		if(auto _ipush = try_consume(TokenType::ipush)) {
+			auto ipush_stmt = m_allocator.emplace<NodeStmtIpush>();
+			ipush_stmt->def = _ipush.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(ipush_stmt);
+			return stmt;
+		}
+
+		if(auto _spush = try_consume(TokenType::spush)) {
+			auto spush_stmt = m_allocator.emplace<NodeStmtSpush>();
+			spush_stmt->def = _spush.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(spush_stmt);
+			return stmt;
+		}
+
+		if(auto _bpush = try_consume(TokenType::bpush)) {
+			auto bpush_stmt = m_allocator.emplace<NodeStmtBpush>();
+			bpush_stmt->def = _bpush.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(bpush_stmt);
+			return stmt;
+		}
+
+		if(auto _sjmp = try_consume(TokenType::sjmp)) {
+			auto sjmp_stmt = m_allocator.emplace<NodeStmtSjmp>();
+			sjmp_stmt->def = _sjmp.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(sjmp_stmt);
+			return stmt;
+		}
+
 		if(auto label = try_consume(TokenType::ident)) {
 			try_consume_err(TokenType::double_dot);
 			auto label_stmt = m_allocator.emplace<NodeStmtLabel>();
 			label_stmt->def = label.value();
 			label_stmt->name = label.value().value.value();
 			auto stmt = m_allocator.emplace<NodeStmt>(label_stmt);
+			return stmt;
+		}
+
+		if(auto entry = try_consume(TokenType::entry)) {
+			auto entry_stmt = m_allocator.emplace<NodeStmtEntry>();
+			entry_stmt->def = entry.value();
+			entry_stmt->name = try_consume_err(TokenType::ident).value.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(entry_stmt);
 			return stmt;
 		}
 

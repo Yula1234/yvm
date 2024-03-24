@@ -19,6 +19,11 @@ enum class TokenType {
     sub,
     mul,
     div,
+    entry,
+    ipush,
+    bpush,
+    spush,
+    sjmp,
 };
 
 std::string tok_to_string(const TokenType type)
@@ -52,6 +57,16 @@ std::string tok_to_string(const TokenType type)
         return "`mul`";
     case TokenType::div:
         return "`div`";
+    case TokenType::entry:
+        return "`entry`";
+    case TokenType::ipush:
+        return "`ipush`";
+    case TokenType::spush:
+        return "`spush`";
+    case TokenType::bpush:
+        return "`bpush`";
+    case TokenType::sjmp:
+        return "`sjmp`";
     }
     assert(false);
 }
@@ -147,6 +162,26 @@ public:
                 }
                 else if(buf == "div") {
                     tokens.push_back({ .type = TokenType::div, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "entry") {
+                    tokens.push_back({ .type = TokenType::entry, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "ipush") {
+                    tokens.push_back({ .type = TokenType::ipush, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "bpush") {
+                    tokens.push_back({ .type = TokenType::bpush, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "spush") {
+                    tokens.push_back({ .type = TokenType::spush, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
+                    buf.clear();
+                }
+                else if(buf == "sjmp") {
+                    tokens.push_back({ .type = TokenType::sjmp, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
                     buf.clear();
                 }
                 else if(buf == "v0" || buf == "v1") {
