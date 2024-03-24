@@ -104,11 +104,19 @@ int* __find_reg(YulaVM* yvm, int reg) {
 	return &(yvm->v0);
 }
 
+typedef enum __sycall_no_ {
+	__syscall_dump_state,
+	__syscall_dump_v1,
+} __sycall_no_;
+
 Err __invoke_syscall(YulaVM* yvm) {
 	int __syscall_no = yvm->v0;
-	if(__syscall_no == 0) {
+	if(__syscall_no == __syscall_dump_state) {
 		dump_yvm_state(yvm, stdout);
 		return ERR_OK;
+	}
+	if(__syscall_no == __syscall_dump_v1) {
+		printf("%d\n", yvm->v1);
 	}
 	return ERR_ILLEGAL_SYSCALL_NO;
 }
