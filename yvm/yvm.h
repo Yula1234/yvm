@@ -221,6 +221,7 @@ const char* __reg_no_to_cstr(int reg) {
 }
 
 void __process_debug_cstate(YulaVM* yvm) {
+	// printf("(ydb) info [v0: %d, v1: %d, ip: %d]\n", yvm->v0, yvm->v1, yvm->ip);
 	Instr cur_inst = yvm->code[yvm->ip];
 	if(cur_inst.type == INSTR_RPUSH)        printf("(ydb) rpush %s", __reg_no_to_cstr(cur_inst.operand));
 	else if(cur_inst.type == INSTR_MOV_V0)  printf("(ydb) mov v0, %d", cur_inst.operand);
@@ -236,7 +237,7 @@ void __process_debug_cstate(YulaVM* yvm) {
 		if(yvm->v0 == 0)      printf(" (dump state)");
 		else if(yvm->v0 == 1) printf(" (dump v1)");
 		else if(yvm->v0 == 2) printf(" (exit)");
-		else printf("WARNING: unkown syscall_no");
+		else printf(" WARNING: unkown syscall_no");
 	}
 }
 
