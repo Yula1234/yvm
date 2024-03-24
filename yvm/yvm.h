@@ -117,6 +117,7 @@ Err __invoke_syscall(YulaVM* yvm) {
 	}
 	if(__syscall_no == __syscall_dump_v1) {
 		printf("%d\n", yvm->v1);
+		return ERR_OK;
 	}
 	return ERR_ILLEGAL_SYSCALL_NO;
 }
