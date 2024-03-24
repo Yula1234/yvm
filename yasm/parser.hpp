@@ -150,6 +150,13 @@ public:
 			return stmt;
 		}
 
+		if(auto syscall = try_consume(TokenType::syscall)) {
+			auto syscall_stmt = m_allocator.emplace<NodeStmtSyscall>();
+			syscall_stmt->def = syscall.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(syscall_stmt);
+			return stmt;
+		}
+
 		// TODO: parse syscall
 
 		return {};

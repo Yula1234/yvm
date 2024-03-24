@@ -29,7 +29,7 @@ void read_bin_file(const char* path, char* buffer) {
 	FILE* file = fopen(path, "rb");
 	fread(tmp_buf, sizeof(char), 2, file);
 	fread(tmp_buf2, sizeof(char), 6, file);
-	fread(buffer, sizeof(char), FILE_SIZE, file);
+	fread(buffer, sizeof(char), FILE_SIZE - 8, file);
 	fclose(file);
 }
 

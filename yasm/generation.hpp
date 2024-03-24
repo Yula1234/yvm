@@ -15,10 +15,10 @@ void consume_un(...) {
 #define REG_V1 1
 
 typedef enum {
-	INSTR_PUSH,
-	INSTR_POP,
-	INSTR_SYSCALL,
-	INSTR_MOV_V0,
+	INSTR_PUSH = 0,
+	INSTR_POP = 1,
+	INSTR_SYSCALL = 2,
+	INSTR_MOV_V0 = 3,
 } InstrType;
 
 typedef struct Instr {
@@ -105,8 +105,9 @@ public:
 
 			void operator()(const NodeStmtSyscall* stmt_syscall) const
 			{
-				std::cout << "syscall\n";
 				consume_un(stmt_syscall);
+				Instr in = { .type = INSTR_SYSCALL, .operand = 0 };
+				gen.m_output << in;
 			}
 		};
 

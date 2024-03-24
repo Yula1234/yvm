@@ -8,10 +8,10 @@
 #include "arena.h"
 
 typedef enum {
-	INSTR_PUSH,
-	INSTR_POP,
-	INSTR_SYSCALL,
-	INSTR_MOV_V0,
+	INSTR_PUSH = 0,
+	INSTR_POP = 1,
+	INSTR_SYSCALL = 2,
+	INSTR_MOV_V0 = 3,
 } InstrType;
 
 typedef struct Instr {
@@ -111,6 +111,26 @@ Err __invoke_syscall(YulaVM* yvm) {
 	return ERR_ILLEGAL_SYSCALL_NO;
 }
 
+const char* inst_as_cstr(InstrType type) {
+	switch(type) {
+	case INSTR_PUSH:
+		return "PUSH";
+	case INSTR_POP:
+		return "POP";
+	case INSTR_MOV_V0:
+		return "mov v0";
+	case INSTR_SYSCALL:
+		return "syscall";
+	default:
+		return "UNKOWN";
+	}
+	return "UNKOWN";
+}
+
+void dump_instr(Instr in) {
+	printf("instr(type=`%s`, operand=%d)\n", inst_as_cstr(in.type), in.operand);
+}
+
 Err yvm_exec_instr(YulaVM* yvm) {
 	Instr cur_inst = yvm->code[yvm->ip];
 	switch(cur_inst.type) {
@@ -150,20 +170,6 @@ Err yvm_exec_instr(YulaVM* yvm) {
 			break;
 	}
 	return ERR_OK;
-}
-
-const char* inst_as_cstr(InstrType type) {
-	switch(type) {
-	case INSTR_PUSH:
-		return "PUSH";
-	default:
-		return "UNKOWN";
-	}
-	return "UNKOWN";
-}
-
-void dump_instr(Instr in) {
-	printf("instr(type=`%s`, operand=%d)\n", inst_as_cstr(in.type), in.operand);
 }
 
 void yvm_exec_prog(YulaVM* yvm) {
