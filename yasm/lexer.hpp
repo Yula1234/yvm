@@ -111,7 +111,7 @@ public:
                     tokens.push_back({ .type = TokenType::mov, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .file = file });
                     buf.clear();
                 }
-                else if(buf == "v0") {
+                else if(buf == "v0" || buf == "v1") {
                     tokens.push_back({ .type = TokenType::reg, .line =  line_count, .col =  m_col - static_cast<int>(buf.size()), .value = buf, .file = file });
                     buf.clear();
                 }

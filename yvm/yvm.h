@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "arena.h"
 
 typedef enum {
@@ -12,6 +13,7 @@ typedef enum {
 	INSTR_POP = 1,
 	INSTR_SYSCALL = 2,
 	INSTR_MOV_V0 = 3,
+	INSTR_MOV_V1 = 4,
 } InstrType;
 
 typedef struct Instr {
@@ -139,27 +141,40 @@ Err yvm_exec_instr(YulaVM* yvm) {
 			if(yvm->stack_head >= YVM_MEM_CAPACITY) {
 				return ERR_STACK_OVERFLOW;
 			}
-			*(int*)(&(yvm->memory[yvm->stack_head])) = cur_inst.operand;
+			uint8_t* sp = &yvm->memory[yvm->stack_head];
+			int* op = &cur_inst.operand;
+			memcpy(sp, op, 4);
+			*sp = cur_inst.operand;
 			yvm->stack_head += 4;
+			yvm->ip += 1;
 			break;
 		}
 		case INSTR_POP:
 		{
-			if(yvm->stack_base <= yvm->stack_head) {
+			if(yvm->stack_base >= yvm->stack_head) {
 				return ERR_STACK_UNDERFLOW;
 			}
 			int* reg = __find_reg(yvm, cur_inst.operand);
-			*reg = yvm->memory[yvm->stack_head];
 			yvm->stack_head -= 4;
+			*reg = *(int*)&yvm->memory[yvm->stack_head];
+			yvm->ip += 1;
 			break;
 		}
 		case INSTR_MOV_V0:
 		{	
 			yvm->v0 = cur_inst.operand;
+			yvm->ip += 1;
+			break;
+		}
+		case INSTR_MOV_V1:
+		{	
+			yvm->v1 = cur_inst.operand;
+			yvm->ip += 1;
 			break;
 		}
 		case INSTR_SYSCALL:
 		{
+			yvm->ip += 1;
 			return __invoke_syscall(yvm);
 			break;
 		}
@@ -173,7 +188,7 @@ Err yvm_exec_instr(YulaVM* yvm) {
 }
 
 void yvm_exec_prog(YulaVM* yvm) {
-	for(;yvm->ip < yvm->code_size;yvm->ip++) {
+	for(;yvm->ip < yvm->code_size;) {
 		Err e = yvm_exec_instr(yvm);
 		if(e != ERR_OK) {
 			fprintf(stderr, "SIGNAL: %s\n", err_as_cstr(e));

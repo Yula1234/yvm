@@ -14,11 +14,22 @@ void consume_un(...) {
 #define REG_V0 0
 #define REG_V1 1
 
+int __reg_to_no(std::string reg) {
+	if(reg == "v0") {
+		return REG_V0;
+	}
+	if(reg == "v1") {
+		return REG_V1;
+	}
+	assert(false && "unkown register");
+}
+
 typedef enum {
 	INSTR_PUSH = 0,
 	INSTR_POP = 1,
 	INSTR_SYSCALL = 2,
 	INSTR_MOV_V0 = 3,
+	INSTR_MOV_V1 = 4,
 } InstrType;
 
 typedef struct Instr {
@@ -84,8 +95,9 @@ public:
 
 			void operator()(const NodeStmtPop* stmt_pop) const
 			{
-				std::cout << "pop\n";
-				consume_un(stmt_pop);
+				int REG = __reg_to_no(stmt_pop->reg);
+				Instr in = { .type = INSTR_POP, .operand = REG };
+				gen.m_output << in;
 			}
 
 			void operator()(const NodeStmtMov* stmt_mov) const
@@ -99,7 +111,17 @@ public:
 					gen.GeneratorError(stmt_mov->def, "except int literal at right");
 				}
 				NodeExprIntLit* lit = std::get<NodeExprIntLit*>(expr->var);
-				Instr in = { .type = INSTR_MOV_V0 , .operand = std::stoi(lit->int_lit.value.value()) };
+				int REG = __reg_to_no(std::get<NodeExprReg*>(to->var)->name);
+				Instr in;
+				if(REG == REG_V0) {
+					in = { .type = INSTR_MOV_V0 , .operand = std::stoi(lit->int_lit.value.value()) };
+				}
+				else if(REG == REG_V1) {
+					in = { .type = INSTR_MOV_V1 , .operand = std::stoi(lit->int_lit.value.value()) };
+				}
+				else {
+					assert(false && "unreacheable");
+				}
 				gen.m_output << in;
 			}
 

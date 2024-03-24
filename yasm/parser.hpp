@@ -120,15 +120,11 @@ public:
 			return stmt;
 		}
 
-		if(auto _push = try_consume(TokenType::pop)) {
-			auto push_stmt = m_allocator.emplace<NodeStmtPush>();
-			push_stmt->def = _push.value();
-			if(auto expr = parse_expr()) {
-				push_stmt->expr = expr.value();
-			} else {
-				error_expected("expression");
-			}
-			auto stmt = m_allocator.emplace<NodeStmt>(push_stmt);
+		if(auto _pop = try_consume(TokenType::pop)) {
+			auto pop_stmt = m_allocator.emplace<NodeStmtPop>();
+			pop_stmt->def = _pop.value();
+			pop_stmt->reg = try_consume_err(TokenType::reg).value.value();
+			auto stmt = m_allocator.emplace<NodeStmt>(pop_stmt);
 			return stmt;
 		}
 
